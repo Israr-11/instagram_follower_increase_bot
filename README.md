@@ -26,6 +26,9 @@ An intelligent Instagram bot that follows users and tracks follow-back statistic
 - Shows days until unfollow eligible
 - Detailed follow-back reports
 
+<img width="1915" height="1020" alt="image" src="https://github.com/user-attachments/assets/e1a75c00-9982-4b97-bb1a-7d6f491817a1" />
+
+
 ## Installation
 
 1. Install Python 3.7 or higher
