@@ -5,6 +5,10 @@ import json
 import os
 from datetime import datetime, timedelta
 from collections import defaultdict
+import sys
+import io
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 class InstaBot:
     def __init__(self, username, password):
@@ -36,6 +40,7 @@ class InstaBot:
         # Filtering settings
         self.min_followers = 100
         self.max_followers = 10000
+        self.check_posts = False  # DISABLED for speed - only check bio/username
         self.tech_keywords = [
             'coding', 'programming', 'developer', 'software', 'tech', 'code',
             'python', 'javascript', 'java', 'web', 'app', 'ai', 'ml', 'data',
@@ -44,21 +49,23 @@ class InstaBot:
             'blockchain', 'cloud', 'aws', 'docker', 'kubernetes', 'api',
             'database', 'sql', 'mongodb', 'git', 'github', 'opensource',
             'linux', 'ubuntu', 'windows', 'macos', 'tutorial', 'learning',
-            'computer', 'science', 'algorithm', 'startup', 'technology'
+            'computer', 'science', 'algorithm', 'startup', 'technology',
+            'html', 'css', 'kotlin', 'swift', 'php', 'ruby', 'golang', 'rust',
+            'machinelearning', 'deeplearning', 'datascience', 'programmer'
         ]
         
         # Unfollow settings
-        self.days_before_unfollow = 7  # Wait 7 days before unfollowing
+        self.days_before_unfollow = 7
         
     def login(self):
         """Login to Instagram"""
         try:
             print(f"[{self.get_timestamp()}] Logging in as {self.username}...")
             self.loader.login(self.username, self.password)
-            print(f"[{self.get_timestamp()}] ✓ Login successful!")
+            print(f"[{self.get_timestamp()}] + Login successful!")
             return True
         except Exception as e:
-            print(f"[{self.get_timestamp()}] ✗ Login failed: {str(e)}")
+            print(f"[{self.get_timestamp()}] x Login failed: {str(e)}")
             return False
     
     def get_timestamp(self):
@@ -115,50 +122,41 @@ class InstaBot:
                         if user_data.get('followed_date', '').startswith(f"{today} {current_hour:02d}:"))
         
         if today_count >= self.daily_limit:
-            print(f"[{self.get_timestamp()}] ⚠ Daily limit reached ({self.daily_limit})")
+            print(f"[{self.get_timestamp()}] ! Daily limit reached ({self.daily_limit})")
             return False
         
         if hour_count >= self.hourly_limit:
-            print(f"[{self.get_timestamp()}] ⚠ Hourly limit reached ({self.hourly_limit})")
+            print(f"[{self.get_timestamp()}] ! Hourly limit reached ({self.hourly_limit})")
             return False
         
         return True
     
     def is_tech_account(self, profile):
-        """Check if account posts tech/coding content"""
+        """Check if account posts tech/coding content - FAST VERSION"""
         try:
             # Check bio for tech keywords
             bio = (profile.biography or '').lower()
             username = profile.username.lower()
             full_name = (profile.full_name or '').lower()
             
-            # Check if any tech keyword is in bio, username, or full name
+            # Combine all text
+            all_text = f"{bio} {username} {full_name}"
+            
+            # Check if any tech keyword is in profile
+            found_keywords = []
             for keyword in self.tech_keywords:
-                if keyword in bio or keyword in username or keyword in full_name:
-                    return True, f"Keyword '{keyword}' found in profile"
+                if keyword in all_text:
+                    found_keywords.append(keyword)
+                    if len(found_keywords) >= 1:  # Found at least 1 keyword
+                        return True, f"Tech keywords: {', '.join(found_keywords[:3])}"
             
-            # Check recent posts for tech-related captions/hashtags
-            posts = profile.get_posts()
-            tech_post_count = 0
+            # SKIP POST CHECKING - TOO SLOW!
+            # Only check bio/username now for speed
             
-            for i, post in enumerate(posts):
-                if i >= 5:  # Check only last 5 posts
-                    break
-                
-                caption = (post.caption or '').lower() if post.caption else ''
-                
-                for keyword in self.tech_keywords:
-                    if keyword in caption:
-                        tech_post_count += 1
-                        break
-            
-            if tech_post_count >= 2:  # At least 2 out of 5 posts are tech-related
-                return True, f"{tech_post_count}/5 recent posts are tech-related"
-            
-            return False, "No tech content detected"
+            return False, "No tech keywords in profile"
             
         except Exception as e:
-            print(f"[{self.get_timestamp()}] ⚠ Error checking tech content: {str(e)}")
+            print(f"[{self.get_timestamp()}] ! Error checking tech content: {str(e)}")
             return False, f"Error: {str(e)}"
     
     def meets_follower_criteria(self, profile):
@@ -166,12 +164,12 @@ class InstaBot:
         followers = profile.followers
         
         if followers < self.min_followers:
-            return False, f"Too few followers ({followers} < {self.min_followers})"
+            return False, f"Too few followers ({followers})"
         
         if followers > self.max_followers:
-            return False, f"Too many followers ({followers} > {self.max_followers})"
+            return False, f"Too many followers ({followers})"
         
-        return True, f"Followers: {followers} (within range)"
+        return True, f"Followers: {followers}"
     
     def should_follow(self, profile):
         """Determine if we should follow this account based on all criteria"""
@@ -193,7 +191,7 @@ class InstaBot:
         if not is_tech:
             return False, tech_msg
         
-        return True, f"✓ Tech account | {follower_msg}"
+        return True, f"+ Tech | {follower_msg}"
     
     def follow_user(self, username_to_follow):
         """Follow a specific user"""
@@ -207,7 +205,7 @@ class InstaBot:
             should_follow, reason = self.should_follow(profile)
             
             if not should_follow:
-                print(f"[{self.get_timestamp()}] ⊘ Skipping {username_to_follow}: {reason}")
+                print(f"[{self.get_timestamp()}] - Skip {username_to_follow}: {reason}")
                 return False
             
             # Follow the user
@@ -226,8 +224,8 @@ class InstaBot:
             
             self.stats['total_followed'] += 1
             
-            print(f"[{self.get_timestamp()}] ✓ Followed {username_to_follow}")
-            print(f"  → {reason}")
+            print(f"[{self.get_timestamp()}] + FOLLOWED {username_to_follow}")
+            print(f"  >> {reason}")
             
             self.save_followed_users()
             self.save_stats()
@@ -235,7 +233,7 @@ class InstaBot:
             return True
             
         except Exception as e:
-            print(f"[{self.get_timestamp()}] ✗ Error following {username_to_follow}: {str(e)}")
+            print(f"[{self.get_timestamp()}] x Error following {username_to_follow}: {str(e)}")
             return False
     
     def check_follow_backs(self):
@@ -244,6 +242,7 @@ class InstaBot:
         
         try:
             my_profile = instaloader.Profile.from_username(self.loader.context, self.username)
+            print(f"[{self.get_timestamp()}] Getting your followers list...")
             my_followers = set(follower.username for follower in my_profile.get_followers())
             
             updated_count = 0
@@ -253,7 +252,7 @@ class InstaBot:
                     self.followed_users[username]['checked_date'] = self.get_timestamp()
                     self.stats['total_followed_back'] += 1
                     updated_count += 1
-                    print(f"[{self.get_timestamp()}] ✓ {username} followed back!")
+                    print(f"[{self.get_timestamp()}] + {username} followed back!")
             
             if self.stats['total_followed'] > 0:
                 self.stats['follow_back_rate'] = (self.stats['total_followed_back'] / self.stats['total_followed']) * 100
@@ -264,7 +263,7 @@ class InstaBot:
             print(f"[{self.get_timestamp()}] Found {updated_count} new follow-backs")
             
         except Exception as e:
-            print(f"[{self.get_timestamp()}] ✗ Error checking follow-backs: {str(e)}")
+            print(f"[{self.get_timestamp()}] x Error checking follow-backs: {str(e)}")
     
     def unfollow_non_followers(self):
         """Unfollow users who didn't follow back after specified days"""
@@ -280,16 +279,13 @@ class InstaBot:
             users_to_unfollow = []
             
             for username, data in self.followed_users.items():
-                # Skip if already followed back
                 if data['followed_back']:
                     continue
                 
-                # Check if enough days have passed
                 followed_date = datetime.strptime(data['followed_date'], "%Y-%m-%d %H:%M:%S")
                 days_passed = (now - followed_date).days
                 
                 if days_passed >= self.days_before_unfollow:
-                    # Double-check they haven't followed back
                     if username not in my_followers:
                         users_to_unfollow.append(username)
             
@@ -303,26 +299,24 @@ class InstaBot:
                     profile = instaloader.Profile.from_username(self.loader.context, username)
                     profile.unfollow()
                     
-                    # Remove from followed users
                     del self.followed_users[username]
                     self.stats['total_unfollowed'] += 1
                     unfollowed_count += 1
                     
-                    print(f"[{self.get_timestamp()}] ✓ Unfollowed {username} (no follow-back)")
+                    print(f"[{self.get_timestamp()}] + Unfollowed {username}")
                     
                     self.save_followed_users()
                     self.save_stats()
                     
-                    # Human-like delay
                     time.sleep(random.uniform(20, 40))
                     
                 except Exception as e:
-                    print(f"[{self.get_timestamp()}] ✗ Error unfollowing {username}: {str(e)}")
+                    print(f"[{self.get_timestamp()}] x Error unfollowing {username}: {str(e)}")
             
             print(f"\n[{self.get_timestamp()}] Unfollowed {unfollowed_count} users")
             
         except Exception as e:
-            print(f"[{self.get_timestamp()}] ✗ Error in unfollow process: {str(e)}")
+            print(f"[{self.get_timestamp()}] x Error in unfollow process: {str(e)}")
     
     def follow_from_list(self, usernames_list):
         """Follow users from a list"""
@@ -339,39 +333,55 @@ class InstaBot:
         self.display_stats()
     
     def follow_followers_of(self, target_username, max_follows=50):
-        """Follow followers of a specific account with filtering"""
+        """Follow followers of a specific account with filtering - OPTIMIZED"""
         try:
-            print(f"\n[{self.get_timestamp()}] Getting followers of {target_username}...")
+            print(f"\n[{self.get_timestamp()}] Getting followers of @{target_username}...")
             
             target_profile = instaloader.Profile.from_username(self.loader.context, target_username)
             followers = target_profile.get_followers()
             
             followed_count = 0
             checked_count = 0
+            skipped_count = 0
+            
+            print(f"[{self.get_timestamp()}] Starting to process followers...")
             
             for follower in followers:
+                # Stop if we hit our follow target
                 if followed_count >= max_follows:
+                    print(f"[{self.get_timestamp()}] Reached target of {max_follows} follows")
                     break
                 
-                if checked_count >= max_follows * 3:  # Check max 3x the target
+                # Don't check too many (5x the target max)
+                if checked_count >= max_follows * 5:
+                    print(f"[{self.get_timestamp()}] Checked {checked_count} users, stopping search")
                     break
                 
                 checked_count += 1
                 
+                # Show progress every 10 checks
+                if checked_count % 10 == 0:
+                    print(f"[{self.get_timestamp()}] Progress: Checked {checked_count}, Followed {followed_count}, Skipped {skipped_count}")
+                
                 if self.follow_user(follower.username):
                     followed_count += 1
                     self.human_delay()
+                else:
+                    skipped_count += 1
             
-            print(f"\n[{self.get_timestamp()}] Followed {followed_count}/{checked_count} checked followers of {target_username}")
+            print(f"\n[{self.get_timestamp()}] Summary:")
+            print(f"  - Checked: {checked_count} users")
+            print(f"  - Followed: {followed_count} users")
+            print(f"  - Skipped: {skipped_count} users")
             self.display_stats()
             
         except Exception as e:
-            print(f"[{self.get_timestamp()}] ✗ Error: {str(e)}")
+            print(f"[{self.get_timestamp()}] x Error: {str(e)}")
     
     def display_stats(self):
         """Display follow statistics"""
         print("\n" + "="*60)
-        print("📊 FOLLOW STATISTICS")
+        print("FOLLOW STATISTICS")
         print("="*60)
         print(f"Total Followed:        {self.stats['total_followed']}")
         print(f"Total Followed Back:   {self.stats['total_followed_back']}")
@@ -401,22 +411,22 @@ class InstaBot:
                 not_followed_back.append((username, data, days_passed))
         
         print("\n" + "="*60)
-        print("📋 DETAILED REPORT")
+        print("DETAILED REPORT")
         print("="*60)
         
-        print(f"\n✓ Users who followed back ({len(followed_back)}):")
+        print(f"\n+ Users who followed back ({len(followed_back)}):")
         for user, data in followed_back[:10]:
             print(f"  - {user} (Followers: {data['followers_count']})")
         if len(followed_back) > 10:
             print(f"  ... and {len(followed_back) - 10} more")
         
-        print(f"\n⏳ Waiting for follow-back ({len(waiting)}):")
+        print(f"\n~ Waiting for follow-back ({len(waiting)}):")
         for user, data, days in waiting[:10]:
             print(f"  - {user} (Day {days}/{self.days_before_unfollow})")
         if len(waiting) > 10:
             print(f"  ... and {len(waiting) - 10} more")
         
-        print(f"\n⚠ Ready to unfollow ({len(not_followed_back)}):")
+        print(f"\n! Ready to unfollow ({len(not_followed_back)}):")
         for user, data, days in not_followed_back[:10]:
             print(f"  - {user} (No follow-back after {days} days)")
         if len(not_followed_back) > 10:

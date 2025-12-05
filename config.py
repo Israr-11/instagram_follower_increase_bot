@@ -1,12 +1,10 @@
 # Instagram Bot Configuration
 
 # Your Instagram credentials
-INSTAGRAM_USERNAME = "your_username_here"
-INSTAGRAM_PASSWORD = "your_password_here"
-
+INSTAGRAM_USERNAME = "israrahmedpk444@gmail.com"
+INSTAGRAM_PASSWORD = "Ahmed@999"
 # Target accounts whose followers you want to follow
 TARGET_ACCOUNTS = [
-    "freecodecamp",
     "python",
     "coding",
     "programming_quotes",
@@ -25,10 +23,10 @@ FILTER_SETTINGS = {
 
 # Bot behavior settings
 BOT_SETTINGS = {
-    'min_delay': 30,           # Minimum delay between follows (seconds)
-    'max_delay': 90,           # Maximum delay between follows (seconds)
-    'hourly_limit': 20,        # Max follows per hour
-    'daily_limit': 150,        # Max follows per day
-    'days_before_unfollow': 7, # Days to wait before unfollowing non-followers
-    'max_follows_per_account': 30
+    'min_delay': 90,           # Minimum delay between follows (seconds)
+    'max_delay': 180,           # Maximum delay between follows (seconds)
+    'hourly_limit': 5,        # Max follows per hour
+    'daily_limit': 30,        # Max follows per day
+    'days_before_unfollow': 14, # Days to wait before unfollowing non-followers
+    'max_follows_per_account': 5
 }

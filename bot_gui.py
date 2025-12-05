@@ -3,6 +3,7 @@ from tkinter import ttk, scrolledtext, messagebox
 import threading
 from insta_bot import InstaBot
 import config
+import sys
 
 class InstaBotGUI:
     def __init__(self, root):
@@ -27,7 +28,7 @@ class InstaBotGUI:
     
     def create_widgets(self):
         # Title
-        title = tk.Label(self.root, text="🤖 Instagram Follow Bot", 
+        title = tk.Label(self.root, text="Instagram Follow Bot", 
                         font=('Segoe UI', 20, 'bold'), bg='#1e1e1e', fg='#0078d4')
         title.pack(pady=10)
         
@@ -149,14 +150,23 @@ class InstaBotGUI:
             except:
                 pass
             
+            # Redirect print to GUI
+            import builtins
+            original_print = builtins.print
+            def gui_print(*args, **kwargs):
+                message = ' '.join(str(arg) for arg in args)
+                self.log(message)
+                original_print(*args, **kwargs)
+            builtins.print = gui_print
+            
             if self.bot.login():
                 self.is_logged_in = True
-                self.log("✓ Login successful!")
+                self.log("+ Login successful!")
                 self.toggle_action_buttons(True)
                 self.login_btn['state'] = 'disabled'
                 self.update_stats()
             else:
-                self.log("✗ Login failed!")
+                self.log("x Login failed!")
                 messagebox.showerror("Error", "Login failed. Check credentials.")
         
         threading.Thread(target=login_thread, daemon=True).start()
@@ -186,23 +196,14 @@ Currently Following:  {len(self.bot.followed_users)}
         
         def follow_thread():
             self.log("\n=== Starting Follow Campaign ===")
+            
             for target in config.TARGET_ACCOUNTS:
-                self.log(f"\nProcessing: {target}")
-                # Redirect bot output to GUI log
-                import sys
-                from io import StringIO
+                self.log(f"\n>>> Processing: {target}")
                 
-                old_stdout = sys.stdout
-                sys.stdout = StringIO()
-                
-                self.bot.follow_followers_of(target, max_follows=config.BOT_SETTINGS['max_follows_per_account'])
-                
-                output = sys.stdout.getvalue()
-                sys.stdout = old_stdout
-                
-                for line in output.split('\n'):
-                    if line.strip():
-                        self.log(line)
+                try:
+                    self.bot.follow_followers_of(target, max_follows=config.BOT_SETTINGS['max_follows_per_account'])
+                except Exception as e:
+                    self.log(f"ERROR: {str(e)}")
             
             self.log("\n=== Campaign Complete ===")
             self.update_stats()
@@ -280,15 +281,15 @@ Currently Following:  {len(self.bot.followed_users)}
         report += "DETAILED FOLLOW REPORT\n"
         report += "=" * 60 + "\n\n"
         
-        report += f"✓ Users who followed back ({len(followed_back)}):\n"
+        report += f"+ Users who followed back ({len(followed_back)}):\n"
         for user, data in followed_back:
             report += f"  - {user} (Followers: {data['followers_count']})\n"
         
-        report += f"\n⏳ Waiting for follow-back ({len(waiting)}):\n"
+        report += f"\n~ Waiting for follow-back ({len(waiting)}):\n"
         for user, data, days in waiting:
             report += f"  - {user} (Day {days}/{self.bot.days_before_unfollow})\n"
         
-        report += f"\n⚠ Ready to unfollow ({len(not_followed_back)}):\n"
+        report += f"\n! Ready to unfollow ({len(not_followed_back)}):\n"
         for user, data, days in not_followed_back:
             report += f"  - {user} (No follow-back after {days} days)\n"
         
