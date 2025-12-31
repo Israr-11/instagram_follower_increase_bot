@@ -1,5 +1,4 @@
 # Instagram Follow Bot
-
 An intelligent Instagram bot that follows users and tracks follow-back statistics with built-in safety features to avoid detection
 
 ## Features
