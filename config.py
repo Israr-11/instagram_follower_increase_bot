@@ -4,8 +4,6 @@
 INSTAGRAM_USERNAME = "israrahmedpk444@gmail.com"
 INSTAGRAM_PASSWORD = "Ahmed@999"
 
-
-
 # Filtering Settings - FULLY CUSTOMIZABLE
 FILTER_SETTINGS = {
     'min_followers': 500,      # Minimum followers
