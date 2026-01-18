@@ -1,5 +1,4 @@
 # Instagram Bot Configuration
-
 # Your Instagram credentials
 INSTAGRAM_USERNAME = "israrahmedpk444@gmail.com"
 INSTAGRAM_PASSWORD = "Ahmed@999"
