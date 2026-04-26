@@ -6,7 +6,7 @@ An intelligent Instagram bot that follows users and tracks follow-back statistic
 ### ✅ **Smart Filtering:**
 1. **Follower Count Filter:** Only follows accounts with 100-10,000 followers (configurable) - these have the highest follow-back rates
 2. **Tech Content Detection:** Analyzes bio, username, and recent posts for tech/coding keywords
-3. **Private Account Skip:** Automatically skips private accounts
+3. **Private Account Skip:** Automatically skips private accounts.
 
 ### ✅ **Auto Unfollow:**
 - Waits 7 days (configurable) before unfollowing
